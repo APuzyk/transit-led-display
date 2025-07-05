@@ -1,0 +1,25 @@
+[build]
+# Ensure build scripts run in the container
+default-target = "aarch64-unknown-linux-gnu"
+
+[target.aarch64-unknown-linux-gnu]
+# Use a custom image if needed (optional)
+# image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:latest"
+
+# Pass through environment variables if needed
+[build.env]
+passthrough = [
+    "RUST_LOG",
+    "CC=aarch64-linux-gnu-gcc",
+    "CXX=aarch64-linux-gnu-g++", 
+    "AR=aarch64-linux-gnu-ar",
+    "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc",
+    "CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++",
+    "AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar",
+    "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc",
+]
+
+# Install additional packages in the container if required
+# pre-build = [
+#     "apt-get update && apt-get install -y libstdc++-dev",
+# ]
