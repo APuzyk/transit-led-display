@@ -159,6 +159,7 @@ impl DisplayBoard {
             debug!("Drawing '{}' at ({}, {})", label, x, y);
             canvas.draw_text(&self.font, label, x, y, &STANDARD_COLOR, 0, false);
         }
+        canvas.draw_text(&self.font, "Hello", 2, 2, &STANDARD_COLOR, 0, false);
 
         canvas = self.led_matrix.swap(canvas);
     }

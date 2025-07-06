@@ -73,6 +73,7 @@ async fn main() -> io::Result<()> {
         thread::sleep(time::Duration::from_secs(60));
         return Ok(());
     }
+
     let stops_to_monitor = config.stops_to_monitor();
     debug!("Stops to monitor: {:?}", stops_to_monitor);
     debug!("Starting update loop");
