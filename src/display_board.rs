@@ -201,6 +201,11 @@ impl DisplayBoard {
         
         // Clear the canvas first
         canvas.clear();
+
+        //hardcode font for testing
+        let font = LedFont::new(
+            Path::new("./4x6.bdf")
+        ).unwrap();
         
         // Test different colors with simple text
         let colors = vec![
@@ -216,7 +221,7 @@ impl DisplayBoard {
         for (i, (text, color)) in colors.iter().enumerate() {
             let y_pos = 8 + (i as i32 * 2);
             debug!("Drawing '{}' in color {:?} at y={}", text, color, y_pos);
-            canvas.draw_text(&self.font, text, 2, y_pos, color, 0, false);
+            canvas.draw_text(&font, text, 2, y_pos, color, 0, false);
         }
         
         // Also draw some colored lines for comparison
