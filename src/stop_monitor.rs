@@ -1,4 +1,3 @@
-use crate::constants::STOPS_TO_MONITOR;
 use chrono;
 use chrono::DateTime;
 use reqwest;
@@ -150,7 +149,6 @@ async fn get_stop_monitor_request(client: &Client, stop_id: &str) -> Result<Valu
         + &token
         + "&agency=SF&stopCode="
         + stop_id;
-    let response = client.get(url).send().await?;
     let response = client.get(url).send().await?;
 
     let response_body = response.error_for_status()?.text().await?;
