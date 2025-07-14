@@ -314,9 +314,9 @@ dependencies = [
 
 [[package]]
 name = "embedded-graphics-core"
-version = "0.3.3"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8b1239db5f3eeb7e33e35bd10bd014e7b2537b17e071f726a09351431337cfa"
+checksum = "ba9ecd261f991856250d2207f6d8376946cd9f412a2165d3b75bc87a0bc7a044"
 dependencies = [
  "az",
  "byteorder",
@@ -995,8 +995,7 @@ dependencies = [
 [[package]]
 name = "rpi-led-matrix"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dad33d57f9596dd7778b97c962d2b61f12f0a7ba9e6687e97660cbdeabc5b670"
+source = "git+https://github.com/APuzyk/rust-rpi-rgb-led-matrix.git#981ea0835a12e7b6e97ad869ec8234551c2f1e8c"
 dependencies = [
  "embedded-graphics-core",
  "libc",
@@ -1006,9 +1005,9 @@ dependencies = [
 [[package]]
 name = "rpi-led-matrix-sys"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c8a1a28f8e8825eb093134821795c2f48954e207f46715225828af9d2fc9008"
+source = "git+https://github.com/APuzyk/rust-rpi-rgb-led-matrix.git#981ea0835a12e7b6e97ad869ec8234551c2f1e8c"
 dependencies = [
+ "cc",
  "copy_dir",
  "libc",
 ]

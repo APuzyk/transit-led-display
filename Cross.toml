@@ -5,6 +5,10 @@ default-target = "aarch64-unknown-linux-gnu"
 [target.aarch64-unknown-linux-gnu]
 # Use a custom image if needed (optional)
 # image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:latest"
+pre-build = [
+    """find /cargo/git/checkouts -name "Makefile" -path "*rpi-led-matrix*" -exec sed -i 's/-march=native/-march=armv8-a/g' {} + 2>/dev/null || true""",
+    """find /target -name "Makefile" -path "*rpi-led-matrix*" -exec sed -i 's/-march=native/-march=armv8-a/g' {} + 2>/dev/null || true"""
+]
 
 # Pass through environment variables if needed
 [build.env]
@@ -13,10 +17,14 @@ passthrough = [
     "CC=aarch64-linux-gnu-gcc",
     "CXX=aarch64-linux-gnu-g++", 
     "AR=aarch64-linux-gnu-ar",
+    "TARGET_CC=aarch64-linux-gnu-gcc",
     "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc",
     "CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++",
     "AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar",
     "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc",
+    "CXXFLAGS=-march=armv8-a",
+    "CFLAGS=-march=armv8-a",
+    "HARDWARE_DESC=armv8-a",
 ]
 
 # Install additional packages in the container if required
