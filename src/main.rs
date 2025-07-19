@@ -88,9 +88,9 @@ async fn main() -> io::Result<()> {
         .await;
         display_board.write_times();
         if display_board.last_request_successful {
-            thread::sleep(time::Duration::from_secs(30));
+            thread::sleep(time::Duration::from_secs(61));
         } else {
-            thread::sleep(time::Duration::from_secs(2));
+            thread::sleep(time::Duration::from_secs(61));
         }
     }
     Ok(())
