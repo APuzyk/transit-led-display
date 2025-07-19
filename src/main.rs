@@ -55,6 +55,7 @@ async fn main() -> io::Result<()> {
         config.display_board_config().chained(),
         font_path,
         config.display_board_config().line_ref_to_display_position(),
+        config.display_board_config().color_config(),
     )
     .unwrap();
     debug!("Created display board");

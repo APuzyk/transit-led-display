@@ -3,52 +3,10 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::{thread, time};
 
+use crate::config::ColorConfig;
 use crate::stop_monitor::MonitoredVehicleJourney;
 use log::debug;
-use rpi_led_matrix::{LedColor, LedFont, LedMatrix, LedMatrixOptions, LedCanvas};
-
-// CONSTANTS for display
-
-// top line purplihs
-const TOP_LINE_COLOR: LedColor = LedColor {
-    red: 0,
-    green: 0,
-    blue: 150,
-};
-
-// Line name color
-const LINE_NAME_COLOR: LedColor = LedColor {
-    red: 255,
-    green: 255,
-    blue: 20,
-};
-
-// Time to arrival color
-const TTA_COLOR: LedColor = LedColor {
-    red: 255,
-    green: 140,
-    blue: 0,
-};
-// Used for most text on teh board
-const STANDARD_COLOR: LedColor = LedColor {
-    red: 0,
-    green: 127,
-    blue: 255,
-};
-
-// legacy: used to distinguish rapid line times when we aggregate line time
-const RAPID_LINE_COLOR: LedColor = LedColor {
-    red: 255,
-    green: 0,
-    blue: 0,
-};
-
-// COlor of the dot used to indicate that there is no locaiton
-const NO_LOC_COLOR: LedColor = LedColor {
-    red: 255,
-    green: 0,
-    blue: 0,
-};
+use rpi_led_matrix::{LedCanvas, LedColor, LedFont, LedMatrix, LedMatrixOptions};
 
 // Number of column used for Line Refs (e.g. 9, 22, 14R)
 const LINE_REF_N_CHARS: usize = 4;
@@ -71,6 +29,7 @@ pub struct DisplayBoard {
     pub led_canvas: LedCanvas,
     pub font: LedFont,
     pub display_position_map: HashMap<String, (i32, i32)>,
+    pub color_config: ColorConfig,
 }
 
 pub struct RGBDisplayLine {
@@ -90,17 +49,6 @@ pub struct LineString {
     is_line_ref: bool,
 }
 
-impl LineString {
-    pub fn new() -> Self {
-        LineString {
-            string: "".to_string(),
-            color: STANDARD_COLOR,
-            has_loc: false,
-            is_line_ref: false,
-        }
-    }
-}
-
 impl DisplayBoard {
     pub fn new(
         rows: u32,
@@ -108,6 +56,7 @@ impl DisplayBoard {
         chained: u32,
         font_file: &Path,
         display_position_map: &HashMap<String, (i32, i32)>,
+        color_config: &ColorConfig,
     ) -> Result<Self, &'static str> {
         let mut options = LedMatrixOptions::new();
         debug!("Setting rows to {}", rows);
@@ -132,6 +81,7 @@ impl DisplayBoard {
             led_canvas: led_canvas,
             font: font,
             display_position_map: display_position_map.clone(),
+            color_config: color_config.clone(),
         };
         Ok(d)
     }
@@ -141,7 +91,8 @@ impl DisplayBoard {
 
         // Your vertical line
         for y in 10..=17 {
-            self.led_canvas.set(10, y, &STANDARD_COLOR);
+            self.led_canvas
+                .set(10, y, &self.color_config.standard_color());
         }
 
         // Get font metrics if available
@@ -159,9 +110,25 @@ impl DisplayBoard {
 
         for (x, y, label) in test_positions {
             debug!("Drawing '{}' at ({}, {})", label, x, y);
-            self.led_canvas.draw_text(&self.font, label, x, y, &STANDARD_COLOR, 0, false);
+            self.led_canvas.draw_text(
+                &self.font,
+                label,
+                x,
+                y,
+                &self.color_config.standard_color(),
+                0,
+                false,
+            );
         }
-        self.led_canvas.draw_text(&self.font, "Hello", 2, 2, &STANDARD_COLOR, 0, false);
+        self.led_canvas.draw_text(
+            &self.font,
+            "Hello",
+            2,
+            2,
+            &self.color_config.standard_color(),
+            0,
+            false,
+        );
 
         // canvas = self.led_matrix.swap(canvas);
     }
@@ -174,7 +141,8 @@ impl DisplayBoard {
             green: green,
             blue: blue,
         };
-        self.led_canvas.draw_text(&self.font, &format!("red {red}"), 2, 12, &color, 0, false);
+        self.led_canvas
+            .draw_text(&self.font, &format!("red {red}"), 2, 12, &color, 0, false);
         self.led_canvas.draw_text(
             &self.font,
             &format!("green: {green}"),
@@ -201,38 +169,87 @@ impl DisplayBoard {
 
     pub fn test_text_colors(&mut self) {
         // let mut canvas = self.led_matrix.offscreen_canvas();
-        
+
         // Clear the canvas first
         self.led_canvas.clear();
 
         //hardcode font for testing
-        let font = LedFont::new(
-            Path::new("./4x6.bdf")
-        ).unwrap();
-        
+        let font = LedFont::new(Path::new("./4x6.bdf")).unwrap();
+
         // Test different colors with simple text
         let colors = vec![
-            ("RED", LedColor { red: 255, green: 0, blue: 0 }),
-            ("GREEN", LedColor { red: 0, green: 255, blue: 0 }),
-            ("BLUE", LedColor { red: 0, green: 0, blue: 255 }),
-            ("YELLOW", LedColor { red: 255, green: 255, blue: 0 }),
-            ("CYAN", LedColor { red: 0, green: 255, blue: 255 }),
-            ("MAGENTA", LedColor { red: 255, green: 0, blue: 255 }),
-            ("WHITE", LedColor { red: 255, green: 255, blue: 255 }),
+            (
+                "RED",
+                LedColor {
+                    red: 255,
+                    green: 0,
+                    blue: 0,
+                },
+            ),
+            (
+                "GREEN",
+                LedColor {
+                    red: 0,
+                    green: 255,
+                    blue: 0,
+                },
+            ),
+            (
+                "BLUE",
+                LedColor {
+                    red: 0,
+                    green: 0,
+                    blue: 255,
+                },
+            ),
+            (
+                "YELLOW",
+                LedColor {
+                    red: 255,
+                    green: 255,
+                    blue: 0,
+                },
+            ),
+            (
+                "CYAN",
+                LedColor {
+                    red: 0,
+                    green: 255,
+                    blue: 255,
+                },
+            ),
+            (
+                "MAGENTA",
+                LedColor {
+                    red: 255,
+                    green: 0,
+                    blue: 255,
+                },
+            ),
+            (
+                "WHITE",
+                LedColor {
+                    red: 255,
+                    green: 255,
+                    blue: 255,
+                },
+            ),
         ];
-        
+
         for (i, (text, color)) in colors.iter().enumerate() {
             let y_pos = 8 + (i as i32 * 2);
             debug!("Drawing '{}' in color {:?} at y={}", text, color, y_pos);
-            self.led_canvas.draw_text(&font, text, 2, y_pos, color, 0, false);
+            self.led_canvas
+                .draw_text(&font, text, 2, y_pos, color, 0, false);
         }
-        
+
         // Also draw some colored lines for comparison
         for i in 0..7 {
             let y_pos = 8 + (i as i32 * 2) + 4;
-            self.led_canvas.draw_line(80, y_pos, 120, y_pos, &colors[i].1);
+            self.led_canvas
+                .draw_line(80, y_pos, 120, y_pos, &colors[i].1);
         }
-        
+
         // canvas = self.led_matrix.swap(canvas);
     }
 
@@ -284,7 +301,7 @@ impl DisplayBoard {
         };
         self.led_canvas.draw_text(
             &self.font, &curr_time, 2, // little bit of buffer
-            curr_row, &color, //&TOP_LINE_COLOR,
+            curr_row, &color, //self.color_config.top_line_color(),
             0, false,
         );
 
@@ -301,7 +318,7 @@ impl DisplayBoard {
                 &last_updated,
                 COL_WIDTH + 2,
                 curr_row,
-                &TOP_LINE_COLOR,
+                self.color_config.top_line_color(),
                 0,
                 false,
             );
@@ -355,7 +372,7 @@ impl DisplayBoard {
                         self.led_canvas.set(
                             col_pos - 1,                // deal with kearning
                             curr_row - FONT_HEIGHT + 1, //top pixel row for curr row
-                            &NO_LOC_COLOR,
+                            &self.color_config.no_location_color(),
                         );
                     }
                     col_pos += 2;
@@ -393,7 +410,7 @@ impl DisplayBoard {
 
             this_line.line.push(LineString {
                 string: line_ref_padded,
-                color: LINE_NAME_COLOR,
+                color: *self.color_config.line_name_color(),
                 has_loc: false,
                 is_line_ref: true,
             });
@@ -406,14 +423,14 @@ impl DisplayBoard {
                         if mvj.has_location() {
                             this_line.line.push(LineString {
                                 string: tta.to_string(),
-                                color: TTA_COLOR,
+                                color: *self.color_config.tta_color(),
                                 has_loc: true,
                                 is_line_ref: false,
                             })
                         } else {
                             this_line.line.push(LineString {
                                 string: tta.to_string(),
-                                color: TTA_COLOR,
+                                color: *self.color_config.tta_color(),
                                 has_loc: false,
                                 is_line_ref: false,
                             })
