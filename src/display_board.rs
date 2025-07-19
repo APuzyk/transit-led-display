@@ -5,7 +5,7 @@ use std::{thread, time};
 
 use crate::stop_monitor::MonitoredVehicleJourney;
 use log::debug;
-use rpi_led_matrix::{LedColor, LedFont, LedMatrix, LedMatrixOptions};
+use rpi_led_matrix::{LedColor, LedFont, LedMatrix, LedMatrixOptions, LedCanvas};
 
 // CONSTANTS for display
 
@@ -68,6 +68,7 @@ pub struct DisplayBoard {
     pub last_successful_request_time: Option<DateTime<Local>>,
     pub last_request_successful: bool,
     pub led_matrix: LedMatrix,
+    pub led_canvas: LedCanvas,
     pub font: LedFont,
     pub display_position_map: HashMap<String, (i32, i32)>,
 }
@@ -118,6 +119,8 @@ impl DisplayBoard {
         options.set_hardware_mapping("adafruit-hat");
 
         let led_matrix = LedMatrix::new(Some(options), None)?;
+        debug!("creating canvas");
+        let mut led_canvas = led_matrix.canvas();
         debug!("loading font from {:?}", font_file);
         let font = LedFont::new(font_file)?;
 
@@ -126,24 +129,23 @@ impl DisplayBoard {
             last_successful_request_time: None,
             last_request_successful: false,
             led_matrix: led_matrix,
+            led_canvas: led_canvas,
             font: font,
             display_position_map: display_position_map.clone(),
         };
-        //        d.initialize_led_matrix(rows, cols, chained);
-        //      d.initialize_font(font_file);
         Ok(d)
     }
 
-    pub fn test_write(&self) {
-        let mut canvas = self.led_matrix.offscreen_canvas();
+    pub fn test_write(&mut self) {
+        // let mut canvas = self.led_matrix.offscreen_canvas();
 
         // Your vertical line
         for y in 10..=17 {
-            canvas.set(10, y, &STANDARD_COLOR);
+            self.led_canvas.set(10, y, &STANDARD_COLOR);
         }
 
         // Get font metrics if available
-        let (height, width) = canvas.canvas_size();
+        let (height, width) = self.led_canvas.canvas_size();
         debug!("Canvas dimensions: {}x{}", width, height);
 
         // Try different Y positions - BDF fonts often have baseline issues
@@ -157,23 +159,23 @@ impl DisplayBoard {
 
         for (x, y, label) in test_positions {
             debug!("Drawing '{}' at ({}, {})", label, x, y);
-            canvas.draw_text(&self.font, label, x, y, &STANDARD_COLOR, 0, false);
+            self.led_canvas.draw_text(&self.font, label, x, y, &STANDARD_COLOR, 0, false);
         }
-        canvas.draw_text(&self.font, "Hello", 2, 2, &STANDARD_COLOR, 0, false);
+        self.led_canvas.draw_text(&self.font, "Hello", 2, 2, &STANDARD_COLOR, 0, false);
 
-        canvas = self.led_matrix.swap(canvas);
+        // canvas = self.led_matrix.swap(canvas);
     }
 
-    pub fn test_color(&self, red: u8, green: u8, blue: u8) {
-        let mut canvas = self.led_matrix.offscreen_canvas();
+    pub fn test_color(&mut self, red: u8, green: u8, blue: u8) {
+        // let mut canvas = self.led_matrix.offscreen_canvas();
         let text = format!("r {red}, g: {green}, b: {blue}");
         let color = LedColor {
             red: red,
             green: green,
             blue: blue,
         };
-        canvas.draw_text(&self.font, &format!("red {red}"), 2, 12, &color, 0, false);
-        canvas.draw_text(
+        self.led_canvas.draw_text(&self.font, &format!("red {red}"), 2, 12, &color, 0, false);
+        self.led_canvas.draw_text(
             &self.font,
             &format!("green: {green}"),
             2,
@@ -182,7 +184,7 @@ impl DisplayBoard {
             0,
             false,
         );
-        canvas.draw_text(
+        self.led_canvas.draw_text(
             &self.font,
             &format!("blue: {blue}"),
             2,
@@ -192,16 +194,16 @@ impl DisplayBoard {
             false,
         );
         for y in 10..22 {
-            canvas.draw_line(80, y, 96, y, &color);
+            self.led_canvas.draw_line(80, y, 96, y, &color);
         }
-        canvas = self.led_matrix.swap(canvas);
+        // canvas = self.led_matrix.swap(canvas);
     }
 
-    pub fn test_text_colors(&self) {
-        let mut canvas = self.led_matrix.offscreen_canvas();
+    pub fn test_text_colors(&mut self) {
+        // let mut canvas = self.led_matrix.offscreen_canvas();
         
         // Clear the canvas first
-        canvas.clear();
+        self.led_canvas.clear();
 
         //hardcode font for testing
         let font = LedFont::new(
@@ -222,19 +224,19 @@ impl DisplayBoard {
         for (i, (text, color)) in colors.iter().enumerate() {
             let y_pos = 8 + (i as i32 * 2);
             debug!("Drawing '{}' in color {:?} at y={}", text, color, y_pos);
-            canvas.draw_text(&font, text, 2, y_pos, color, 0, false);
+            self.led_canvas.draw_text(&font, text, 2, y_pos, color, 0, false);
         }
         
         // Also draw some colored lines for comparison
         for i in 0..7 {
             let y_pos = 8 + (i as i32 * 2) + 4;
-            canvas.draw_line(80, y_pos, 120, y_pos, &colors[i].1);
+            self.led_canvas.draw_line(80, y_pos, 120, y_pos, &colors[i].1);
         }
         
-        canvas = self.led_matrix.swap(canvas);
+        // canvas = self.led_matrix.swap(canvas);
     }
 
-    pub fn test_colors(&self) {
+    pub fn test_colors(&mut self) {
         for red in (0..255).step_by(16) {
             for green in (0..255).step_by(16) {
                 for blue in (0..255).step_by(16) {
@@ -258,11 +260,10 @@ impl DisplayBoard {
         );
         return (x, y);
     }
-    pub fn write_lines(self) {
-        self.write_times();
-    }
-    pub fn write_times(&self) {
-        let mut canvas = self.led_matrix.offscreen_canvas();
+
+    pub fn write_times(&mut self) {
+        // let mut canvas = self.led_matrix.offscreen_canvas();
+        self.led_canvas.clear();
         let mut curr_row = FONT_HEIGHT;
         let mut curr_time = String::from("Now ");
         let now = Local::now();
@@ -281,7 +282,7 @@ impl DisplayBoard {
             green: 255,
             blue: 255,
         };
-        canvas.draw_text(
+        self.led_canvas.draw_text(
             &self.font, &curr_time, 2, // little bit of buffer
             curr_row, &color, //&TOP_LINE_COLOR,
             0, false,
@@ -295,7 +296,7 @@ impl DisplayBoard {
                 last_updated,
                 (COL_WIDTH + 2, curr_row)
             );
-            canvas.draw_text(
+            self.led_canvas.draw_text(
                 &self.font,
                 &last_updated,
                 COL_WIDTH + 2,
@@ -318,7 +319,7 @@ impl DisplayBoard {
                         line_str.string,
                         (col_pos, curr_row)
                     );
-                    canvas.draw_text(
+                    self.led_canvas.draw_text(
                         &self.font,
                         &line_str.string,
                         col_pos,
@@ -338,7 +339,7 @@ impl DisplayBoard {
                         to_write,
                         (col_pos, curr_row)
                     );
-                    canvas.draw_text(
+                    self.led_canvas.draw_text(
                         &self.font,
                         &to_write,
                         col_pos,
@@ -351,7 +352,7 @@ impl DisplayBoard {
 
                     // write the dot if we don't have a loc
                     if !line_str.has_loc {
-                        canvas.set(
+                        self.led_canvas.set(
                             col_pos - 1,                // deal with kearning
                             curr_row - FONT_HEIGHT + 1, //top pixel row for curr row
                             &NO_LOC_COLOR,
@@ -362,7 +363,7 @@ impl DisplayBoard {
                 }
             }
         }
-        canvas = self.led_matrix.swap(canvas);
+        // canvas = self.led_matrix.swap(canvas);
     }
 
     // pub fn lines_to_write(self) -> Vec<String> {
