@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::{thread, time};
 
-use crate::config::ColorConfig;
+use crate::config::{ColorConfig, DisplayBoardConfig};
 use crate::stop_monitor::MonitoredVehicleJourney;
 use log::debug;
 use rpi_led_matrix::{LedCanvas, LedColor, LedFont, LedMatrix, LedMatrixOptions};
@@ -19,8 +19,6 @@ const TTA_BUFFER_COLS: i32 = 4;
 // COL WIDTH OF A SINGLE BOARD
 const COL_WIDTH: i32 = 64;
 
-const FONT_HEIGHT: i32 = 6;
-
 pub struct DisplayBoard {
     pub display_lines: Option<HashMap<String, Vec<MonitoredVehicleJourney>>>,
     pub last_successful_request_time: Option<DateTime<Local>>,
@@ -28,8 +26,10 @@ pub struct DisplayBoard {
     pub led_matrix: LedMatrix,
     pub led_canvas: LedCanvas,
     pub font: LedFont,
+    pub font_height: i32,
     pub display_position_map: HashMap<String, (i32, i32)>,
     pub color_config: ColorConfig,
+    pub max_time_to_arrivals_to_display: u32,
 }
 
 pub struct RGBDisplayLine {
@@ -51,27 +51,27 @@ pub struct LineString {
 
 impl DisplayBoard {
     pub fn new(
-        rows: u32,
-        cols: u32,
-        chained: u32,
-        font_file: &Path,
-        display_position_map: &HashMap<String, (i32, i32)>,
-        color_config: &ColorConfig,
+        config: &DisplayBoardConfig,
     ) -> Result<Self, &'static str> {
         let mut options = LedMatrixOptions::new();
-        debug!("Setting rows to {}", rows);
-        debug!("Setting cols to {}", cols);
-        options.set_rows(rows);
-        options.set_cols(cols);
-        debug!("Setting chain length to {}", chained);
-        options.set_chain_length(2);
+        debug!("Setting rows to {}", config.rows());
+        debug!("Setting cols to {}", config.cols());
+        options.set_rows(config.rows());
+        options.set_cols(config.cols());
+        debug!("Setting chain length to {}", config.chained());
+        options.set_chain_length(config.chained());
         options.set_hardware_mapping("adafruit-hat");
 
         let led_matrix = LedMatrix::new(Some(options), None)?;
         debug!("creating canvas");
         let mut led_canvas = led_matrix.canvas();
-        debug!("loading font from {:?}", font_file);
-        let font = LedFont::new(font_file)?;
+        let font_path = Path::new(config.font_file());
+        debug!("font path: {:?}", font_path);
+        if !font_path.exists() {
+            panic!("font file doesn't exist");
+        }
+        debug!("loading font from {:?}", font_path);
+        let font = LedFont::new(font_path)?;
 
         let mut d = DisplayBoard {
             display_lines: None,
@@ -80,8 +80,10 @@ impl DisplayBoard {
             led_matrix: led_matrix,
             led_canvas: led_canvas,
             font: font,
-            display_position_map: display_position_map.clone(),
-            color_config: color_config.clone(),
+            font_height: config.font_height(),
+            display_position_map: config.line_ref_to_display_position().clone(),
+            color_config: config.color_config().clone(),
+            max_time_to_arrivals_to_display: config.max_time_to_arrivals_to_display(),
         };
         Ok(d)
     }
@@ -270,7 +272,7 @@ impl DisplayBoard {
 
         let (col, row) = self.display_position_map.get(line_ref).unwrap_or(&(1, 2));
         let x = (COL_WIDTH * *col) + 2;
-        let y = (FONT_HEIGHT + 1) * (*row + 2);
+        let y = (self.font_height + 1) * (*row + 1);
         debug!(
             "line_ref='{}', col={}, row={}, calculated=({},{})",
             line_ref, col, row, x, y
@@ -281,7 +283,7 @@ impl DisplayBoard {
     pub fn write_times(&mut self) {
         // let mut canvas = self.led_matrix.offscreen_canvas();
         self.led_canvas.clear();
-        let mut curr_row = FONT_HEIGHT;
+        let mut curr_row = self.font_height;
         let mut curr_time = String::from("Now ");
         let now = Local::now();
         if now.month() == 2 && now.day() == 2 {
@@ -371,7 +373,7 @@ impl DisplayBoard {
                     if !line_str.has_loc {
                         self.led_canvas.set(
                             col_pos - 1,                // deal with kearning
-                            curr_row - FONT_HEIGHT + 1, //top pixel row for curr row
+                            curr_row - self.font_height + 1, //top pixel row for curr row
                             &self.color_config.no_location_color(),
                         );
                     }
@@ -403,9 +405,9 @@ impl DisplayBoard {
 
         for key in sorted_keys {
             let mut this_line = RGBDisplayLine::new();
-            let first_mvj = &display_lines[&key][0];
-            let line_ref = first_mvj.line_ref.clone();
+            let line_ref = key.clone();
             let line_ref: String = line_ref.chars().take(LINE_REF_N_CHARS).collect();
+            debug!("line_ref: {:?}", line_ref);
             let line_ref_padded = format!("{:<width$}", line_ref, width = LINE_REF_N_CHARS);
 
             this_line.line.push(LineString {
@@ -414,8 +416,12 @@ impl DisplayBoard {
                 has_loc: false,
                 is_line_ref: true,
             });
-
+            let mut counter = 0;
             for mvj in &display_lines[&key] {
+                if counter >= self.max_time_to_arrivals_to_display {
+                    break;
+                }
+                counter += 1;
                 match mvj.time_to_arrival() {
                     Some(tta) => {
                         // rapid lines the line ref isn't the same

@@ -44,18 +44,8 @@ async fn main() -> io::Result<()> {
 
     debug!("creating display board...");
 
-    let font_path = Path::new(config.display_board_config().font_file());
-    debug!("font path: {:?}", font_path);
-    if !font_path.exists() {
-        panic!("font file doesn't exist");
-    }
     let mut display_board = DisplayBoard::new(
-        config.display_board_config().rows(),
-        config.display_board_config().cols(),
-        config.display_board_config().chained(),
-        font_path,
-        config.display_board_config().line_ref_to_display_position(),
-        config.display_board_config().color_config(),
+        config.display_board_config()
     )
     .unwrap();
     debug!("Created display board");
@@ -141,7 +131,8 @@ async fn update_display_board(
     stops_to_monitor: &Vec<String>,
 ) {
     if let Ok(stops) = get_stops(client, stops_to_monitor).await {
-        if let Ok(display_lines) = get_display_lines(stops, rapid_line_to_parent_map, true) {
+        if let Ok(display_lines) = get_display_lines(
+            stops, rapid_line_to_parent_map, true) {
             debug!("Received lines to display");
             (*display_board).display_lines = Some(display_lines);
             (*display_board).last_successful_request_time = Some(Local::now());
@@ -162,16 +153,20 @@ fn get_display_lines(
 ) -> Result<HashMap<String, Vec<MonitoredVehicleJourney>>, reqwest::Error> {
     const DEFAULT_TIME_TO_ARRIVAL: i64 = 999;
     let mut display: HashMap<String, Vec<MonitoredVehicleJourney>> = HashMap::new();
-
+    debug!("Iterating through linestops");
     for (line_stop, value) in stops.into_iter() {
+        debug!("line_ref: {:?}", line_stop.line_ref);
+        debug!("screen_display: {:?}", line_stop.screen_display());
+        debug!("Using line to parent map: {:?}", use_line_to_parent_map);
         let parent_line = if use_line_to_parent_map {
             match rapid_line_to_parent_map.get(line_stop.line_ref.as_str()) {
                 Some(parent_line) => parent_line.clone(),
-                None => line_stop.screen_display(),
+                None => line_stop.line_ref.clone(),
             }
         } else {
-            line_stop.screen_display()
+            line_stop.line_ref.clone()
         };
+        debug!("Parent line: {:?}", parent_line);
 
         // Add new time to arrivals or create a new entry in display lines
         for mvj in value {

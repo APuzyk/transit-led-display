@@ -73,6 +73,8 @@ pub struct DisplayBoardConfig {
     chained: u32,
     line_ref_to_display_position: HashMap<String, (i32, i32)>,
     color_config: ColorConfig,
+    max_time_to_arrivals_to_display: u32,
+    font_height: i32,
 }
 impl DisplayBoardConfig {
     pub fn new(config: &Yaml) -> Self {
@@ -96,6 +98,10 @@ impl DisplayBoardConfig {
                 })
                 .collect(),
             color_config: ColorConfig::new(&config["color_config"]),
+            max_time_to_arrivals_to_display: config["max_time_to_arrivals_to_display"]
+                .as_i64()
+                .unwrap() as u32,
+            font_height: config["font_height"].as_i64().unwrap() as i32,
         }
     }
     pub fn font_file(&self) -> &str {
@@ -115,6 +121,12 @@ impl DisplayBoardConfig {
     }
     pub fn color_config(&self) -> &ColorConfig {
         &self.color_config
+    }
+    pub fn max_time_to_arrivals_to_display(&self) -> u32 {
+        self.max_time_to_arrivals_to_display
+    }
+    pub fn font_height(&self) -> i32 {
+        self.font_height
     }
 }
 
